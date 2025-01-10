@@ -12,7 +12,7 @@ import { AuthProvider } from "./context/AuthContext";
 import { CartProvider } from "./context/CartContext";
 import { ProductFilterProvider } from "./context/ProductFilterContext";
 import RequireAdmin from "./components/RequireAdmin"; // Secure admin route
-import Footer from "./components/footer";
+import Footer from "./components/Footer";
 
 function App() {
   return (
