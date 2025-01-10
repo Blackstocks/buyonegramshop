@@ -4,6 +4,7 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Carousel } from 'react-responsive-carousel';
+import LoginRegisterModal from './LoginRegisterModal';
 import 'react-responsive-carousel/lib/styles/carousel.min.css';
 
 interface Product {
@@ -27,6 +28,8 @@ interface GroupedProduct {
 const Home: React.FC = () => {
   const [groupedProducts, setGroupedProducts] = useState<GroupedProduct[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [selectedProductForModal, setSelectedProductForModal] = useState<any>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -57,6 +60,28 @@ const Home: React.FC = () => {
 
     fetchAndGroupProducts();
   }, []);
+
+  const onModalClose = () => {
+    setShowModal(false);
+    setSelectedProductForModal(null);
+  };
+
+  const onLoginSuccess = () => {
+    if (selectedProductForModal) {
+      const { action, product } = selectedProductForModal;
+      if (action === 'addToCart') {
+        addToCart(product);
+      } else if (action === 'buyNow') {
+        navigate('/checkout', {
+          state: {
+            product: product,
+          },
+        });
+      }
+    }
+    setShowModal(false);
+    setSelectedProductForModal(null);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -101,16 +126,37 @@ const Home: React.FC = () => {
         ) : (
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {groupedProducts.map((product) => (
-              <ProductCard key={product.name} product={product} navigate={navigate} />
+              <ProductCard 
+                key={product.name} 
+                product={product} 
+                setShowModal={setShowModal}
+                setSelectedProductForModal={setSelectedProductForModal}
+              />
             ))}
           </div>
         )}
       </div>
+
+      {/* Login/Register Modal */}
+      {showModal && (
+        <LoginRegisterModal 
+          onClose={onModalClose} 
+          onLoginSuccess={onLoginSuccess}
+        />
+      )}
     </div>
   );
 };
 
-const ProductCard: React.FC<{ product: GroupedProduct; navigate: any }> = ({ product, navigate }) => {
+const ProductCard: React.FC<{ 
+  product: GroupedProduct; 
+  setShowModal: (show: boolean) => void;
+  setSelectedProductForModal: (product: any) => void;
+}> = ({ 
+  product, 
+  setShowModal, 
+  setSelectedProductForModal 
+}) => {
   const { addToCart } = useCart();
   const { user } = useAuth();
   const [selectedWeight, setSelectedWeight] = useState(product.variations[0].weight);
@@ -119,33 +165,38 @@ const ProductCard: React.FC<{ product: GroupedProduct; navigate: any }> = ({ pro
   const selectedPrice = selectedProduct?.price;
 
   const handleAddToCart = async () => {
+    const cartItem = {
+      id: selectedProduct?.id,
+      product_id: selectedProduct?.id,
+      name: product.name,
+      weight: selectedWeight,
+      price: selectedPrice || 0,
+      quantity: 1,
+    };
+
     if (!user) {
-      navigate('/login');
+      setSelectedProductForModal({ action: 'addToCart', product: cartItem });
+      setShowModal(true);
     } else if (selectedProduct) {
-      const cartItem = {
-        id: selectedProduct.id,
-        product_id: selectedProduct.id,
-        name: product.name,
-        weight: selectedWeight,
-        price: selectedPrice || 0,
-        quantity: 1,
-      };
-      await addToCart(cartItem); // Updates the cart in the database
+      await addToCart(cartItem);
     }
   };
 
   const handleBuyNow = () => {
+    const productData = {
+      id: selectedProduct?.id,
+      name: product.name,
+      weight: selectedWeight,
+      price: selectedPrice,
+    };
+
     if (!user) {
-      navigate('/login');
-    } else if (selectedProduct) {
+      setSelectedProductForModal({ action: 'buyNow', product: productData });
+      setShowModal(true);
+    } else {
       navigate('/checkout', {
         state: {
-          product: {
-            id: selectedProduct.id,
-            name: product.name,
-            weight: selectedWeight,
-            price: selectedPrice,
-          },
+          product: productData,
         },
       });
     }
@@ -162,7 +213,7 @@ const ProductCard: React.FC<{ product: GroupedProduct; navigate: any }> = ({ pro
       <select
         value={selectedWeight}
         onChange={(e) => setSelectedWeight(e.target.value)}
-        className="w-full p-2 border rounded"
+        className="w-full p-2 mt-2 border rounded"
       >
         {product.variations.map((variation) => (
           <option key={variation.weight} value={variation.weight}>
@@ -171,13 +222,19 @@ const ProductCard: React.FC<{ product: GroupedProduct; navigate: any }> = ({ pro
         ))}
       </select>
       <p className="mt-2 font-bold text-green-700">
-        {selectedPrice !== null ? `$${selectedPrice.toFixed(2)}` : 'Not Available'}
+        ₹{selectedPrice !== null ? selectedPrice.toFixed(2) : 'Not Available'}
       </p>
       <div className="flex gap-2 mt-4">
-        <button onClick={handleAddToCart} className="px-4 py-2 text-white bg-green-600 rounded hover:bg-green-700">
+        <button 
+          onClick={handleAddToCart} 
+          className="flex-1 px-4 py-2 text-white bg-green-600 rounded hover:bg-green-700"
+        >
           Add to Cart
         </button>
-        <button onClick={handleBuyNow} className="px-4 py-2 text-white bg-green-600 rounded hover:bg-green-700">
+        <button 
+          onClick={handleBuyNow} 
+          className="flex-1 px-4 py-2 text-white bg-green-600 rounded hover:bg-green-700"
+        >
           Buy Now
         </button>
       </div>

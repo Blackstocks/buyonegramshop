@@ -2,11 +2,13 @@ import React, { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../context/AuthContext";
+import { useCart } from "../context/CartContext";
 
 const Checkout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { clearCart } = useCart();
   const cartItems = location.state?.cartItems || [];
   const singleProduct = location.state?.product || null;
 
@@ -29,7 +31,6 @@ const Checkout: React.FC = () => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
 
-    // Automatically fetch city and state for ZIP code
     if (name === "zipCode" && value.length === 6) {
       fetch(`https://api.postalpincode.in/pincode/${value}`)
         .then((res) => res.json())
@@ -72,7 +73,7 @@ const Checkout: React.FC = () => {
 
     if (paymentMethod === "cod") {
       await placeOrderInDatabase(orderItems, "Cash on Delivery");
-      setShowPopup(true); // Show order confirmation popup
+      setShowPopup(true);
     } else {
       handleOnlinePayment(orderItems);
     }
@@ -101,11 +102,25 @@ const Checkout: React.FC = () => {
         setError("Failed to place order. Please try again.");
       } else {
         console.log("Order placed successfully");
+
+        // Clear the cart in the database and context
+        const { error: clearCartError } = await supabase
+          .from("cart")
+          .delete()
+          .eq("user_id", user.id);
+
+        if (clearCartError) {
+          console.error("Error clearing cart after order:", clearCartError);
+        } else {
+          console.log("Cart cleared successfully after order");
+          await clearCart(); // Update the local context state
+        }
+
         if (paymentMethod === "Cash on Delivery") {
-          setShowPopup(true); // Show confirmation popup for COD
+          setShowPopup(true);
         } else {
           alert("Order placed successfully with Online Payment!");
-          navigate("/"); // Redirect after successful order
+          navigate("/");
         }
       }
     } catch (err) {
@@ -144,7 +159,7 @@ const Checkout: React.FC = () => {
     return (
       (singleProduct
         ? singleProduct.price
-        : cartItems.reduce((acc: number, item: any) => acc + item.price, 0)) + 50 // Add ₹50 delivery charge
+        : cartItems.reduce((acc: number, item: any) => acc + item.price, 0)) + 50
     );
   };
 
@@ -272,7 +287,6 @@ const Checkout: React.FC = () => {
             <span>₹{totalPrice}</span>
           </p>
 
-          {/* Payment Method */}
           <div className="mt-4">
             <h3 className="mb-2 font-semibold text-md">Payment Method</h3>
             <label className="block">
@@ -307,7 +321,6 @@ const Checkout: React.FC = () => {
 
       {error && <p className="mt-4 text-red-600">{error}</p>}
 
-      {/* Order Confirmation Popup */}
       {showPopup && (
         <div className="fixed top-0 left-0 flex items-center justify-center w-full h-full bg-black bg-opacity-50">
           <div className="p-6 text-center bg-white rounded-lg shadow-lg">
@@ -329,3 +342,4 @@ const Checkout: React.FC = () => {
 };
 
 export default Checkout;
+
