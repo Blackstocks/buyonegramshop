@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Carousel } from 'react-responsive-carousel';
 import LoginRegisterModal from './LoginRegisterModal';
 import 'react-responsive-carousel/lib/styles/carousel.min.css';
@@ -85,7 +85,6 @@ const Home: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Carousel Section */}
       <div className="mb-8">
         <Carousel
           autoPlay
@@ -96,29 +95,31 @@ const Home: React.FC = () => {
         >
           <div>
             <img
-              src="https://via.placeholder.com/1200x400?text=Welcome+to+GroceryStore"
-              alt="Banner 1"
-              className="rounded-lg"
-            />
-          </div>
-          <div>
-            <img
-              src="https://via.placeholder.com/1200x400?text=Fresh+Pulses+and+Dals"
-              alt="Banner 2"
-              className="rounded-lg"
-            />
-          </div>
-          <div>
-            <img
-              src="https://via.placeholder.com/1200x400?text=Best+Deals+on+Rice"
+              src="https://i.ibb.co/mXdkbyc/ban2.webp"
               alt="Banner 3"
               className="rounded-lg"
             />
           </div>
+          
+          <div>
+            <img
+              src="https://i.ibb.co/wyrWSB3/Buy-One-Gram.png"
+              alt="Banner 2"
+              className="rounded-lg"
+            />
+          </div>
+
+          <div>
+            <img
+              src="https://as1.ftcdn.net/v2/jpg/05/43/25/74/1000_F_543257422_dSaLDOns13TpGsOLEUiYXOKCMq2ixFDj.jpg"
+              alt="Banner 1"
+              className="rounded-lg"
+            />
+          </div>
+          
         </Carousel>
       </div>
 
-      {/* Products Section */}
       <div className="container px-4 py-8 mx-auto">
         <h2 className="mb-6 text-2xl font-bold text-gray-800">Our Products</h2>
         {loading ? (
@@ -137,7 +138,6 @@ const Home: React.FC = () => {
         )}
       </div>
 
-      {/* Login/Register Modal */}
       {showModal && (
         <LoginRegisterModal 
           onClose={onModalClose} 
@@ -159,6 +159,7 @@ const ProductCard: React.FC<{
 }) => {
   const { addToCart } = useCart();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [selectedWeight, setSelectedWeight] = useState(product.variations[0].weight);
 
   const selectedProduct = product.variations.find((v) => v.weight === selectedWeight);
@@ -183,8 +184,13 @@ const ProductCard: React.FC<{
   };
 
   const handleBuyNow = () => {
+    if (!selectedProduct) {
+      console.error('No product selected');
+      return;
+    }
+
     const productData = {
-      id: selectedProduct?.id,
+      id: selectedProduct.id,
       name: product.name,
       weight: selectedWeight,
       price: selectedPrice,
@@ -242,4 +248,32 @@ const ProductCard: React.FC<{
   );
 };
 
+const Checkout: React.FC = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const product = location.state?.product;
+
+  useEffect(() => {
+    if (!product) {
+      navigate('/');
+    }
+  }, [product, navigate]);
+
+  return (
+    <div className="container px-4 py-8 mx-auto">
+      <h1 className="mb-6 text-2xl font-bold">Checkout</h1>
+      {product ? (
+        <div className="p-4 bg-white rounded shadow">
+          <p><strong>Product:</strong> {product.name}</p>
+          <p><strong>Weight:</strong> {product.weight}</p>
+          <p><strong>Price:</strong> ₹{product.price.toFixed(2)}</p>
+        </div>
+      ) : (
+        <p className="text-gray-500">No product to display</p>
+      )}
+    </div>
+  );
+};
+
 export default Home;
+export { Checkout };

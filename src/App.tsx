@@ -12,6 +12,7 @@ import { AuthProvider } from "./context/AuthContext";
 import { CartProvider } from "./context/CartContext";
 import { ProductFilterProvider } from "./context/ProductFilterContext";
 import RequireAdmin from "./components/RequireAdmin"; // Secure admin route
+import Footer from "./components/footer";
 
 function App() {
   return (
@@ -38,6 +39,7 @@ function App() {
                   />
                 </Routes>
               </main>
+              <Footer />
               <Toaster /> {/* Add this */}
             </div>
           </BrowserRouter>
